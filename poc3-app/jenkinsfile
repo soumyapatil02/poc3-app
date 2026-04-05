@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "soumyanadiger04p/poc3-app"
+        DOCKER_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=poc3-app'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push $DOCKER_IMAGE:$DOCKER_TAG
+                        docker tag $DOCKER_IMAGE:$DOCKER_TAG $DOCKER_IMAGE:latest
+                        docker push $DOCKER_IMAGE:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Update Manifests') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'sonar-cred',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                        rm -rf poc3-manifests
+                        git clone https://$GIT_USER:$GIT_TOKEN@github.com/$GIT_USER/poc3-manifests.git
+                        cd poc3-manifests
+                        sed -i "s|image:.*|image: $DOCKER_IMAGE:$DOCKER_TAG|g" deployment.yml
+                        git config user.email "jenkins@poc3.com"
+                        git config user.name "Jenkins"
+                        git add deployment.yml
+                        git commit -m "Update image to $DOCKER_TAG"
+                        git push
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Pipeline FAILED!'
+        }
+        success {
+            echo 'Pipeline SUCCESS! Image deployed.'
+        }
+    }
+}
