@@ -16,7 +16,9 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                 dir('poc3-app') {
+            sh 'mvn clean package -DskipTests'
+        }
             }
         }
 
