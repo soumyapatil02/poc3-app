@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'Maven'
+    }
+
     environment {
         DOCKER_IMAGE = "soumyanadiger04p/poc3-app"
         DOCKER_TAG = "${BUILD_NUMBER}"
