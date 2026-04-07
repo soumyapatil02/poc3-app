@@ -26,9 +26,10 @@ pipeline {
             steps {
                     {
                     dir('poc3-app')
-                    }
+                        {
                 withSonarQubeEnv('sonarqube') {
                     sh 'mvn sonar:sonar -Dsonar.projectKey=poc3-app'
+                }
                 }
             }
         }
