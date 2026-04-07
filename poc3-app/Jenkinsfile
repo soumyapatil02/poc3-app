@@ -35,8 +35,10 @@ pipeline {
 
         stage('Test') {
             steps {
+                   dir('poc3-app') {
                 sh 'mvn test'
             }
+        }
         }
 
         stage('Docker Build & Push') {
