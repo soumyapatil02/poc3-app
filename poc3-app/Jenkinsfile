@@ -20,43 +20,46 @@ pipeline {
 
         stage('Build') {
             steps {
-                 dir('poc3-app') {
-            sh 'mvn clean package -DskipTests'
-        }
+                dir('poc3-app') {
+                    sh 'mvn clean package -DskipTests'
+                }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                    dir('poc3-app')
-                        {
-                withSonarQubeEnv('sonarqube') {
-                    sh 'mvn sonar:sonar -Dsonar.projectKey=poc3-app'
-                }
+                dir('poc3-app') {
+                    withSonarQubeEnv('sonarqube') {
+                        sh 'mvn sonar:sonar -Dsonar.projectKey=poc3-app'
+                    }
                 }
             }
         }
 
         stage('Test') {
             steps {
-                   dir('poc3-app') {
-                sh 'mvn test'
+                dir('poc3-app') {
+                    sh 'mvn test'
+                }
             }
         }
+
         stage('Docker Build & Push') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                        docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push $DOCKER_IMAGE:$DOCKER_TAG
-                        docker tag $DOCKER_IMAGE:$DOCKER_TAG $DOCKER_IMAGE:latest
-                        docker push $DOCKER_IMAGE:latest
-                    '''
+                dir('poc3-app') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh '''
+                            docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+                            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                            docker push $DOCKER_IMAGE:$DOCKER_TAG
+                            docker tag $DOCKER_IMAGE:$DOCKER_TAG $DOCKER_IMAGE:latest
+                            docker push $DOCKER_IMAGE:latest
+                        '''
+                    }
                 }
             }
         }
