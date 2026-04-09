@@ -20,20 +20,26 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                 dir('poc3-app') {
+            sh 'mvn clean package -DskipTests'
+        }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
+                    dir('poc3-app')
+                        {
                 withSonarQubeEnv('sonarqube') {
                     sh 'mvn sonar:sonar -Dsonar.projectKey=poc3-app'
+                }
                 }
             }
         }
 
         stage('Test') {
             steps {
+                   dir('poc3-app') {
                 sh 'mvn test'
             }
         }
